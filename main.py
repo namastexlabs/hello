@@ -8,7 +8,7 @@ import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 from fastapi import FastAPI, Query
 from typing import Optional
@@ -20,8 +20,6 @@ import sys
 import statistics  # Make sure this import is at the top of your file
 from rich.console import Console
 from rich.text import Text
-from rich import print as rprint
-import humanize
 from pydub import AudioSegment
 import numpy as np
 
