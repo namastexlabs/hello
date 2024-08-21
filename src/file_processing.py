@@ -6,16 +6,24 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from fastapi import FastAPI
 import uvicorn
-from src.utils import is_file_ready, is_audio_non_empty, log_stats_to_db, append_to_csv, log_performance_stats
-from src.database import setup_database, get_unprocessed_files, get_total_files
+from src.utils import is_file_ready, is_audio_non_empty, log_stats_to_db, append_to_csv, log_performance_stats, get_stats_from_db
+from src.database import get_unprocessed_files, get_total_files
 from src.constants import SUPPORTED_EXTENSIONS
 from rich.console import Console
 from rich.text import Text
 from datetime import datetime
 import json
-
+import signal
 
 app = FastAPI()
+console = Console()
+
+# Global variables
+global_queue_size = 0
+total_processed_files = 0
+shutdown_requested = False
+processing_task = None
+processing_times = []
 
 class FileHandler(FileSystemEventHandler):
     def __init__(self, queue, db_connection):
@@ -68,6 +76,7 @@ async def process_files(queue, db_connection, stats_db_conn, language, provider,
 
 async def process_single_file(file_path, db_connection, stats_db_conn, language, provider, **provider_kwargs):
     global global_queue_size
+    global processing_times
     
     # Wait for the file to be completely written
     while not is_file_ready(file_path):
@@ -102,6 +111,7 @@ async def process_single_file(file_path, db_connection, stats_db_conn, language,
         
         end_time = time.time()
         processing_time = end_time - start_time
+        processing_times.append(processing_time)
         
         audio_duration = transcription['segments'][-1]['end'] if transcription['segments'] else 0
         speed = audio_duration / processing_time
@@ -146,17 +156,23 @@ async def process_single_file(file_path, db_connection, stats_db_conn, language,
         logging.error(f"Error processing file {file_path}: {str(e)}", exc_info=True)
         console.print(f"[bold red]Error processing file {os.path.basename(file_path)}: {str(e)}[/bold red]")
 
+def signal_handler(signum, frame):
+    global shutdown_requested
+    global processing_task
+    print("Shutdown requested. Cleaning up...")
+    shutdown_requested = True
+    if processing_task:
+        processing_task.cancel()
+
 async def start_file_processing(language, provider, db_connection, stats_db_conn, **provider_kwargs):
     global global_queue_size
     global shutdown_requested
     global processing_task
+    global processing_times
     # Set up logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
     queue = asyncio.Queue()
-    
-    # Set up SQLite database
-    db_connection = setup_database()
 
     # Process existing files
     recordings_path = os.getenv("RECORDINGS_PATH", r"./recordings")
@@ -187,6 +203,10 @@ async def start_file_processing(language, provider, db_connection, stats_db_conn
     # Start the file processing task
     processing_task = asyncio.create_task(process_files(queue, db_connection, stats_db_conn, language, provider, **provider_kwargs))
 
+    # Set up signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     # Start the FastAPI server
     config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
     server = uvicorn.Server(config)
@@ -203,7 +223,6 @@ async def start_file_processing(language, provider, db_connection, stats_db_conn
         observer.stop()
         await processing_task
         observer.join()
-        db_connection.close()
         
         # Log final performance stats
-        log_performance_stats()
+        log_performance_stats(processing_times)

@@ -7,9 +7,9 @@ import asyncio
 from dotenv import load_dotenv
 from src.providers.groq_whisper_provider import create_groq_whisper_provider
 from src.providers.faster_whisper_provider import create_faster_whisper_provider
-from src.file_processing import start_file_processing
+from src.file_processing import start_file_processing, signal_handler
 from src.database import init_db, clean_stats
-from src.utils import signal_handler
+from src.utils import get_stats_from_db
 
 # Load environment variables from .env file
 load_dotenv()
@@ -104,7 +104,6 @@ if __name__ == "__main__":
         if not api_keys:
             raise ValueError("No API keys found. Please set GROQ_API_KEYS in your .env file.")
         provider = create_groq_whisper_provider(api_keys)
-
     else:
         provider = create_faster_whisper_provider(**init_kwargs)
 

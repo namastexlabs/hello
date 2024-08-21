@@ -5,3 +5,4 @@ transcription_stats.db
 transcriptions.csv
 .env
 recordings
+__pycache__

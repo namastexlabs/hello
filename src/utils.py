@@ -1,16 +1,12 @@
 import logging
-import signal
-import time
 import os
+import time
 import numpy as np
 from pydub import AudioSegment
-
-def signal_handler(signum, frame):
-    global shutdown_requested
-    print("Shutdown requested. Cleaning up...")
-    shutdown_requested = True
-    if processing_task:
-        processing_task.cancel()
+import csv
+import json
+from datetime import datetime
+import statistics
 
 def is_file_ready(file_path, min_size=1024, check_interval=1, timeout=300):
     start_time = time.time()
@@ -71,7 +67,7 @@ def append_to_csv(file_path, transcription):
             'provider_output': json.dumps(transcription)
         })
 
-def log_performance_stats():
+def log_performance_stats(processing_times):
     if not processing_times:
         return
     
@@ -81,3 +77,18 @@ def log_performance_stats():
     num_files = len(processing_times)
     
     logging.info(f"Stats: Files: {num_files} | Total Time: {total_time:.2f}s | Avg Time: {avg_time:.2f}s | Median Time: {med_time:.2f}s")
+
+def get_stats_from_db(db_conn):
+    c = db_conn.cursor()
+    c.execute("SELECT COUNT(*), SUM(transcription_time), AVG(transcription_time), MIN(transcription_time) FROM transcription_stats")
+    result = c.fetchone()
+    count, total_time, avg_time, min_time = result if result else (0, 0, 0, 0)
+    
+    if count:
+        c.execute("SELECT transcription_time FROM transcription_stats ORDER BY transcription_time LIMIT 2 - (? % 2) OFFSET (?-1)/2", (count, count))
+        median_result = c.fetchall()
+        median_time = median_result[0][0] if count % 2 != 0 else sum(row[0] for row in median_result) / 2
+    else:
+        median_time = 0
+    
+    return count, total_time or 0, avg_time or 0, median_time, min_time or 0

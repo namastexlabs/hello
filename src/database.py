@@ -7,8 +7,20 @@ def init_db(db_path):
     """Initialize the database and create necessary tables if they don't exist."""
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
+    
+    # Create transcription_stats table
     c.execute('''CREATE TABLE IF NOT EXISTS transcription_stats
                  (timestamp TEXT, file_path TEXT, duration REAL, transcription_time REAL, speed REAL)''')
+    
+    # Create processed_files table
+    c.execute('''CREATE TABLE IF NOT EXISTS processed_files
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  file_path TEXT UNIQUE,
+                  transcription TEXT,
+                  status TEXT DEFAULT 'processed',
+                  recorded_at TIMESTAMP,
+                  processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    
     conn.commit()
     return conn
 
@@ -54,8 +66,13 @@ def clean_stats(db_path):
 def get_unprocessed_files(db_connection, recordings_path):
     """Retrieve unprocessed files from the recordings directory."""
     cursor = db_connection.cursor()
-    cursor.execute("SELECT file_path FROM processed_files WHERE status = 'processed'")
-    processed_files = set(row[0] for row in cursor.fetchall())
+    
+    try:
+        cursor.execute("SELECT file_path FROM processed_files WHERE status = 'processed'")
+        processed_files = set(row[0] for row in cursor.fetchall())
+    except sqlite3.OperationalError:
+        # Table doesn't exist, so no files have been processed yet
+        processed_files = set()
     
     all_files = [os.path.join(recordings_path, f) for f in os.listdir(recordings_path) 
                  if f.lower().endswith(SUPPORTED_EXTENSIONS)]
