@@ -6,3 +6,4 @@ transcriptions.csv
 .env
 recordings/*
 !recordings/
+recordings.local
