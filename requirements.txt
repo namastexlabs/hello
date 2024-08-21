@@ -1,9 +1,12 @@
-openai
-faster-whisper
+fastapi
+uvicorn
 watchdog
 python-dotenv
 pydub
-fastapi
-uvicorn
+numpy
+simpleobsws
 groq
+rich
 humanize
+ffmpeg-python
+faster-whisper @ git+https://github.com/SYSTRAN/faster-whisper.git@master
