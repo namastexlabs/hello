@@ -270,6 +270,11 @@ async def start_file_processing(language, provider, db_connection, stats_db_conn
 
     # Process existing files
     recordings_path = os.getenv("RECORDINGS_PATH", r"./recordings")
+    
+    # Create folder if it doesn't exist
+    if not os.path.exists(recordings_path):
+        os.makedirs(recordings_path)
+    
     unprocessed_files = get_unprocessed_files(db_connection, recordings_path)
     for file_path in unprocessed_files:
         queue.put_nowait(file_path)
