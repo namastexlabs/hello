@@ -1,0 +1,9 @@
+openai
+faster-whisper
+watchdog
+python-dotenv
+pydub
+fastapi
+uvicorn
+groq
+humanize

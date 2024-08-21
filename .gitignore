@@ -1,0 +1,8 @@
+.venv
+processed_files.db
+processed_files_old.db
+transcription_stats.db
+transcriptions.csv
+.env
+recordings/*
+!recordings/
