@@ -5,4 +5,8 @@ transcription_stats.db
 transcriptions.csv
 .env
 recordings
-__pycache__
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
