@@ -1,0 +1,1 @@
+SUPPORTED_EXTENSIONS = ('.mp4', '.mp3')
