@@ -4,6 +4,4 @@ processed_files_old.db
 transcription_stats.db
 transcriptions.csv
 .env
-recordings/*
-!recordings/
-recordings.local
+recordings
