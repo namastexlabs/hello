@@ -63,10 +63,11 @@ async def search_files(
         {
             "id": row[0],
             "file_path": row[1],
-            "transcription": json.loads(row[2])['text'],
-            "status": row[3],
-            "recorded_at": row[4],
-            "processed_at": row[5]
+            "transcription_data": json.loads(row[2]),
+            "text": row[3],
+            "status": row[4],
+            "recorded_at": row[5],
+            "processed_at": row[6]
         }
         for row in results
     ]
