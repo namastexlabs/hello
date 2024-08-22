@@ -7,12 +7,20 @@ import asyncio
 from dotenv import load_dotenv
 from src.providers.groq_whisper_provider import create_groq_whisper_provider
 from src.providers.faster_whisper_provider import create_faster_whisper_provider
-from src.file_processing import start_file_processing, signal_handler
-from src.database import init_db, clean_stats
-from src.utils import get_stats_from_db
+from src.file_processing import start_file_processing
+from src.database import init_db, clean_stats, get_previous_transcription_thread_safe
+from src.api import app
+import uvicorn
 
 # Load environment variables from .env file
 load_dotenv()
+
+shutdown_requested = False
+
+def signal_handler(signum, frame):
+    global shutdown_requested
+    print("Shutdown requested. Cleaning up...")
+    shutdown_requested = True
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process audio files for transcription using either Groq or Faster Whisper.")
@@ -65,6 +73,10 @@ if __name__ == "__main__":
     db_connection = init_db(args.database)
     stats_db_conn = init_db(args.stats_db)
 
+    if db_connection is None or stats_db_conn is None:
+        logging.error("Failed to initialize one or both databases. Exiting.")
+        sys.exit(1)
+
     # Separate initialization parameters
     init_kwargs = {
         "model_size": args.model_size,
@@ -111,9 +123,37 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    asyncio.run(start_file_processing(args.language, provider, db_connection, stats_db_conn, **transcribe_kwargs))
-    
-    db_connection.close()
-    stats_db_conn.close()
-    print("Shutdown complete.")
-    sys.exit(0)
+    async def main():
+        global shutdown_requested
+        # Start the file processing task
+        file_processing_task = asyncio.create_task(
+            start_file_processing(args.language, provider, args.database, args.stats_db, **transcribe_kwargs)
+        )
+
+        # Start the FastAPI server
+        config = uvicorn.Config(app, host="0.0.0.0", port=8000, log_level="info")
+        server = uvicorn.Server(config)
+        server_task = asyncio.create_task(server.serve())
+
+        # Wait for shutdown signal
+        while not shutdown_requested:
+            await asyncio.sleep(1)
+
+        # Shutdown tasks
+        file_processing_task.cancel()
+        await file_processing_task
+        server.should_exit = True
+        await server_task
+
+        print("Shutdown complete.")
+
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if db_connection:
+            db_connection.close()
+        if stats_db_conn:
+            stats_db_conn.close()
+        sys.exit(0)
