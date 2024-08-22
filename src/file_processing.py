@@ -154,9 +154,19 @@ async def process_single_file(file_path, db_path, stats_db_path, language, provi
             # Extract the full text from the transcription
             full_text = transcription.get('text', '')
 
+            # Extract recorded_at from the filename
+            try:
+                recorded_at_str = os.path.basename(file_path).split('_')[0]
+                recorded_at = datetime.strptime(recorded_at_str, "%Y-%m-%d_%H-%M-%S")
+            except ValueError:
+                try:
+                    recorded_at = datetime.fromtimestamp(os.path.getmtime(file_path))  # Fallback to file metadata if parsing fails
+                except Exception:
+                    recorded_at = datetime.now()  # Fallback to current time if metadata extraction fails
+
             cursor.execute(
                 "INSERT OR REPLACE INTO processed_files (file_path, transcription, text, status, recorded_at) VALUES (?, ?, ?, ?, ?)",
-                (file_path, json.dumps(transcription), full_text, "processed" if transcription['segments'] else "skipped", datetime.now())
+                (file_path, json.dumps(transcription), full_text, "processed" if transcription['segments'] else "skipped", recorded_at)
             )
             db_connection.commit()
 
