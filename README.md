@@ -21,9 +21,9 @@ Hello is a project aimed at democratizing audio processing and transcription ser
 
 - Python 3.8+
 - CUDA-compatible GPU (for Faster Whisper)
-- NVIDIA CUDA Toolkit 12.x
-- cuBLAS for CUDA 12
-- cuDNN 8 for CUDA 12
+- [NVIDIA CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-toolkit)
+- [cuBLAS for CUDA 12](https://developer.nvidia.com/cublas) 
+- [cuDNN 8 for CUDA 12 (NVIDIA Archive)](https://developer.nvidia.com/rdp/cudnn-archive)
 - FFmpeg
 
 ### NVIDIA Library Installation
@@ -38,6 +38,7 @@ The libraries are pre-installed in official NVIDIA CUDA Docker images:
 
 <details>
 <summary>Option 2: Install with pip (Linux only)</summary>
+
 
 ```bash
 pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
@@ -145,6 +146,16 @@ This setup aims to facilitate easier access to transcriptions for agent systems.
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## ❓ FAQ
+
+### Known Errors
+
+#### Error: Could not load library `libcudnn_ops_infer.so.8`
+
+This error occurs when the environment does not have the CUDA toolkit installed or properly configured. Ensure that you have the CUDA toolkit installed and that your environment variables are correctly set up.
+
+You can download the CUDA toolkit from the [NVIDIA website](https://developer.nvidia.com/cuda-downloads).
 
 ## 🌟 Community
 
